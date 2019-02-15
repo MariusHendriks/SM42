@@ -5,10 +5,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -24,34 +30,34 @@ public class ReportActivity extends AppCompatActivity {
     Button btnPhone;
     Button btn_start_gps;
     Button btn_stop_gps;
+    LocationManager locationManager;
+    LocationListener locationListener;
     TextView gpsText;
 
     //When created
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_report);
 
-        //Set global variables
-        Button btnCamera = (Button)findViewById(R.id.btnCamera);
-        ImageView imgView = (ImageView)findViewById(R.id.imgView);
-        Button btnPhone = (Button)findViewById(R.id.btnPhone);
-        Button btn_start_gps = (Button)findViewById(R.id.btnStartGps);
-        Button btn_stop_gps = (Button)findViewById(R.id.btnStopGps);
-        TextView gpsText = (TextView)findViewById(R.id.textViewGps);
+        //reference options
+        btnCamera = (Button) findViewById(R.id.btnCamera);
+        imgView = (ImageView) findViewById(R.id.imgView);
+        btnPhone = (Button) findViewById(R.id.btnPhone);
+        btn_start_gps = (Button) findViewById(R.id.btnStartGps);
+        gpsText = (TextView) findViewById(R.id.textViewGps);
 
-        if(!runtime_permissions()){
-            enable_buttons();
-        };
-
+        //Open Dial
         btnPhone.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent intent = new Intent(Intent.ACTION_DIAL);
-                intent.setData(Uri.parse("tel:113"));
+                intent.setData(Uri.parse("tel:42069"));
                 startActivity(intent);
             }
         });
+        //Open camera
         btnCamera.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -59,40 +65,65 @@ public class ReportActivity extends AppCompatActivity {
                 startActivityForResult(intent, 0);
             }
         });
-    }
 
-    private void enable_buttons() {
-        btn_start_gps.setOnClickListener(new View.OnClickListener() {
+        //initialize Locationmanager
+        locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+        //Locationlistener functions
+        locationListener = new LocationListener() {
             @Override
-            public void onClick(View v) {
-                Intent intent = new Intent(getApplicationContext(), GPS_Service.class);
-                startService(intent);
+            public void onLocationChanged(Location location) {
+                gpsText.setText("\n "+location.getLatitude() +" "+location.getLongitude());
             }
-        });
-        btn_stop_gps.setOnClickListener(new View.OnClickListener() {
+
             @Override
-            public void onClick(View v) {
+            public void onStatusChanged(String provider, int status, Bundle extras) {
 
             }
-        });
-    }
 
-    private boolean runtime_permissions() {
-        //Check if sdk version is 23 or higher AND if there is permission from the manifest (confirmed by user)
-        if(Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            @Override
+            public void onProviderEnabled(String provider) {
 
-            //Get actual permission.
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},  100);
-            return true;
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
         };
-        return false;
+        //Gegenereerd door requestlocationupdates. 
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission. INTERNET
+            }, 10);
+            return;
+        }else{
+            configureButton();
+        }
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Bitmap bitmap = (Bitmap)data.getExtras().get("data");
-        imgView.setImageBitmap(bitmap);
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        switch(requestCode){
+            case 10:
+                if(grantResults.length>0 && grantResults[0] == PackageManager.PERMISSION_DENIED){
+                    configureButton();
+                }
+        }
+    }
+
+    private void configureButton() {
+        btn_start_gps.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //Error niet relevant, want ik check of de user op nee drukt in de if statement waar configurebutton wordt aangeroepen.
+                locationManager.requestLocationUpdates("gps", 1000, 1, locationListener);
+            }
+        });
+
     }
 
 
@@ -101,12 +132,4 @@ public class ReportActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if(requestCode == 100 && grantResults[0] == PackageManager.PERMISSION_GRANTED  &&   grantResults[1] ==  PackageManager.PERMISSION_GRANTED){
-            enable_buttons();
-        }else{
-            runtime_permissions();
-        }
-    }
 }
