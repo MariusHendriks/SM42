@@ -13,6 +13,7 @@ import android.os.Build;
 import android.provider.MediaStore;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -65,7 +66,6 @@ public class ReportActivity extends AppCompatActivity {
                 startActivityForResult(intent, 0);
             }
         });
-
         //initialize Locationmanager
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
 
@@ -126,6 +126,12 @@ public class ReportActivity extends AppCompatActivity {
 
     }
 
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        Bitmap bitmap = (Bitmap)data.getExtras().get("data");
+        imgView.setImageBitmap(bitmap);
+    }
 
     public void CloseWindow(View view){
         Intent intent = new Intent(this, MainActivity.class);
