@@ -15,6 +15,7 @@
  */
 package com.google.firebase.udacity.friendlychat;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -51,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";
 
-    public static final String ANONYMOUS = "anonymous";
+    public static final String ANONYMOUS = "Unknown";
     public static final int DEFAULT_MSG_LENGTH_LIMIT = 1000;
     public static final int RC_SIGN_IN = 1;
 
@@ -138,44 +139,19 @@ public class MainActivity extends AppCompatActivity {
                 mMessageEditText.setText("");
             }
         });
-        mChildEventListeren = new ChildEventListener() {
-            @Override
-            public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
-                FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
-                mMessageAdapter.add(friendlyMessage);
-            }
 
-            @Override
-            public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
 
-            }
-
-            @Override
-            public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) {
-
-            }
-
-            @Override
-            public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
-
-            }
-
-            @Override
-            public void onCancelled(@NonNull DatabaseError databaseError) {
-
-            }
-        };
-
-        mMessagesDatabaseReference.addChildEventListener(mChildEventListeren);
         mAuthStateListener = new FirebaseAuth.AuthStateListener() {
             @Override
             public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
                 FirebaseUser user = firebaseAuth.getCurrentUser();
                 if(user != null){
-                    Toast.makeText(MainActivity.this, "You're signed in and stuff", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, "Welcome " + user.getDisplayName() + ", to FriendlyChat!", Toast.LENGTH_SHORT).show();
 
-                    
+                    OnSignedInInitialize(user.getDisplayName());
                 }else {
+                    OnSignedOutCleanUp();
+
                     //User not logged in
                     startActivityForResult(
                             AuthUI.getInstance()
@@ -189,6 +165,19 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         };
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data){
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == RC_SIGN_IN){
+            if(resultCode == RESULT_OK){
+                Toast.makeText(MainActivity.this, "Welcome , to FriendlyChat!", Toast.LENGTH_SHORT).show();
+            }
+            else if(resultCode == RESULT_CANCELED){
+                Toast.makeText(MainActivity.this, "Bye :(", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override
@@ -206,12 +195,59 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause(){
         super.onPause();
+        //Zorgt dat je als je niet bent ingelogd niets ziet
         mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+        DetachDatabaseListener();
+        mMessageAdapter.clear();
     }
 
     @Override
     protected void onResume(){
         super.onResume();
         mFirebaseAuth.addAuthStateListener(mAuthStateListener);
+    }
+
+    private void OnSignedInInitialize(String username){
+        //Set username to initialized username.
+        mUsername = username;
+        AttachDatabaseListener();
+        mMessagesDatabaseReference.addChildEventListener(mChildEventListeren);
+    }
+
+    private void AttachDatabaseListener() {
+        //only attach is childeventlisterner is null.
+        if(mChildEventListeren == null){
+            mChildEventListeren = new ChildEventListener() {
+                @Override
+                public void onChildAdded(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {
+                    FriendlyMessage friendlyMessage = dataSnapshot.getValue(FriendlyMessage.class);
+                    mMessageAdapter.add(friendlyMessage);
+                }
+
+                @Override
+                public void onChildChanged(@NonNull DataSnapshot dataSnapshot, @Nullable String s) { }
+                @Override
+                public void onChildRemoved(@NonNull DataSnapshot dataSnapshot) { }
+                @Override
+                public void onChildMoved(@NonNull DataSnapshot dataSnapshot, @Nullable String s) {}
+                @Override
+                public void onCancelled(@NonNull DatabaseError databaseError) {}
+            };
+        }
+    }
+
+    private void OnSignedOutCleanUp(){
+        mUsername = ANONYMOUS;
+        mMessageAdapter.clear();
+        DetachDatabaseListener();
+    }
+
+    private void DetachDatabaseListener() {
+        //To secure if there even is a listener.
+        if(mChildEventListeren != null){
+            mMessagesDatabaseReference.removeEventListener(mChildEventListeren);
+            mChildEventListeren = null;
+        }
+
     }
 }
