@@ -176,6 +176,7 @@ public class MainActivity extends AppCompatActivity {
             }
             else if(resultCode == RESULT_CANCELED){
                 Toast.makeText(MainActivity.this, "Bye :(", Toast.LENGTH_SHORT).show();
+                finish();
             }
         }
     }
@@ -189,7 +190,14 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        return super.onOptionsItemSelected(item);
+        switch(item.getItemId()) {
+            case R.id.sign_out_menu:
+                //Sign out
+                AuthUI.getInstance().signOut(this);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
     @Override
