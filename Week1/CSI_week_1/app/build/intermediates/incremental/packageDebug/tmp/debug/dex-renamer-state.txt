@@ -1,0 +1,4 @@
+#Thu Feb 14 13:20:35 CET 2019
+base.0=D\:\\Apps\\SM42\\Week1\\CSI_week_1\\app\\build\\intermediates\\dex\\debug\\mergeDexDebug\\out
+path.0=classes.dex
+renamed.0=classes.dex

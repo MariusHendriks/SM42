@@ -191,7 +191,8 @@ public class MainActivity extends AppCompatActivity {
             }
             else if(requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK){
                 Uri selectedImageUri = data.getData();
-                mChatPhotosStorageReference.child(selectedImageUri.getLastPathSegment());
+                StorageReference photoRef = mChatPhotosStorageReference.child(selectedImageUri.getLastPathSegment());
+                photoRef.putFile(selectedImageUri);
             }
         }
     }
